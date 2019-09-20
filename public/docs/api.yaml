@@ -1,0 +1,959 @@
+openapi: 3.0.0
+info:
+  title: ARTube API
+  description: ARTube 서버 REST API
+  version: 0.1.0
+  contact:
+    email: "admin@isilab.kaist.ac.kr"
+
+servers:
+  - url: http://143.248.56.59:7000/api/v1
+    description: API Test server
+
+tags:
+  - name: User
+    description: 사용자 API
+  - name: Image
+    description: 이미지 API
+  - name: Video
+    description: 비디오 API
+  - name: Link
+    description: 링크 API
+paths:
+  /users/register:
+    post:
+      tags:
+        - User
+      summary: 사용자 계정 생성
+      description: API를 호출하기 위해서는 먼저 사용자 계정을 생성해야 합니다. 계정 생성시 사용자 이메일은 사용자 ID로써 서비스에서 유일해야 합니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  description: 사용자 이름
+                email:
+                  type: string
+                  description: 사용자 이메일
+                password:
+                  type: string
+                  description: 비밀번호(6자리 이상 12자리 이하)
+              required:
+                - username
+                - email
+                - password
+            example:
+              username: Jun Lee
+              email: junlee@gmail.com
+              password: abcd
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+        "400":
+          description: Email is already taken
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              example:
+                message: 'Email "junlee@gmail.com" is already taken'
+  /users/authenticate:
+    post:
+      tags:
+        - User
+      summary: 로그인
+      description: 사용자 계정 생성 및 로그인 API를 제외한 사용자 인증이 필요한 나머지 API들을 호출하기 위해서는 액세스 토큰(access token)을 발급 받아서 API 호출시 발급받은 액세스 토큰을 같이 전달해주어야 합니다. 따라서 액세스 토큰을 전달받으면 클라이언트는 안전한 장소에 이 액세스 토큰을 저장하고 API 호출시 꺼내서 사용합니다. 액세스 토큰은 로그인할 때마다 새로 발급되며, 토큰 유효 기간이 지나면 인증이 필요한 API 호출이 불가능하기 때문에 로그인을 통해 토큰을 새로 발급받아야 합니다. 로그아웃 API는 따로 제공하지 않습니다. 그 이유는 클라이언트 측에서 API를 호출할 때 액세스 토큰을 같이 전달하지 않으면 허가받지 않은(로그아웃) 상태로 간주하기 때문입니다. 클라이언트에서는 로그아웃 버튼을 누르면 저장하고 있는 액세스 토큰을 지우는 것으로 로그아웃을 쉽게 구현할 수 있습니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: 사용자 이메일
+                password:
+                  type: string
+                  description: 비밀번호
+              required:
+                - email
+                - password
+            example:
+              email: junlee@gmail.com
+              password: abcd
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                    description: 사용자 ID
+                  username:
+                    type: string
+                    description: 사용자 이름
+                  email:
+                    type: string
+                    description: 사용자 이메일
+                  createdAt:
+                    type: string
+                    description: "생성 날짜/시간"
+                  updatedAt:
+                    type: string
+                    description: "마지막 수정 날짜/시간"
+                  accessToken:
+                    type: string
+                    description: "액세스 토큰"
+              example:
+                _id: 5cda76af7a6a68609a521842
+                username: Jun Lee
+                email: junlee@gmail.com
+                createdAt: "2019-05-14T08:05:03.602Z"
+                updatedAt: "2019-05-14T08:05:03.602Z"
+                accessToken: eyJhbGcioiJIuzI1NiIsInr5cCi6IkpXVCJ9.eyJpZCI6IjVjZGE3NmFmN2E2YtY4njA5YTuyMtg0OSIsImlhdCi6MTU1NzkyNzYyOH0.Jm3Rp0OslYNrO_KwWMmwxRctDKVD0jlB1VszC5pZqg0
+  /users/current:
+    get:
+      tags:
+        - User
+      summary: 로그인 사용자 계정 정보
+      description: 현재 로그인한 사용자 정보를 보여줍니다.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/User"
+              example:
+                _id: 5cda76af7a6a68609a521842
+                username: Jun Lee
+                email: junlee@gmail.com
+                createdAt: "2019-05-14T08:05:03.602Z"
+                updatedAt: "2019-05-14T08:05:03.602Z"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+  /users/{id}:
+    get:
+      tags:
+        - User
+      summary: 사용자 계정 정보 가져오기
+      description: 사용자 ID를 통해 사용자 정보를 보여줍니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 사용자 ID
+      responses:
+        "200":
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/User"
+              example:
+                _id: 5cda76af7a6a68609a521842
+                username: Jun Lee
+                email: junlee@gmail.com
+                createdAt: "2019-05-14T08:05:03.602Z"
+                updatedAt: "2019-05-14T08:05:03.602Z"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+        "404":
+          description: 사용자를 찾을 수 없는 경우입니다. 사용자 ID가 정확한지 확인하세요.
+    put:
+      tags:
+        - User
+      summary: 사용자 정보 업데이트
+      description: 사용자 정보를 업데이트합니다. 이메일을 제외한 사용자 이름과 비밀번호를 업데이트할 수 있습니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 사용자 ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+            example:
+              username: Jun Lim
+      responses:
+        "200":
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/User"
+              example:
+                _id: 5cda76af7a6a68609a521842
+                username: Jun Lim
+                email: junlee@gmail.com
+                createdAt: "2019-05-14T08:05:03.602Z"
+                updatedAt: "2019-05-19T03:12:38.602Z"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+        "404":
+          description: 사용자를 찾을 수 없는 경우입니다. 사용자 ID가 정확한지 확인하세요.
+    delete:
+      tags:
+        - User
+      summary: 사용자 계정 삭제
+      description: 사용자를 삭제합니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 사용자 ID
+      responses:
+        "200":
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+        "404":
+          description: 사용자를 찾을 수 없는 경우입니다. 사용자 ID가 정확한지 확인하세요.
+  /images:
+    post:
+      tags:
+        - Image
+      summary: 이미지 정보 업로드
+      description: 앱을 통해 인식할 이미지 정보를 업로드합니다. 이 때 이미지 파일뿐만 아니라 이미지 파일 너비, 높이와 인쇄된 이미지(물리적 이미지)의 너비, 높이 정보를 입력해줘야 합니다. 물리적 이미지 크기는 단위는 m이며, 완벽히 정확한 크기를 입력하지 않아도 되지만 인쇄된 이미지의 너비, 높이 비율은 이미지 파일상의 너비, 높이 비율과 일치해야 합니다.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 이미지 파일
+                width:
+                  type: integer
+                  description: "이미지 파일 너비(단위: px)"
+                height:
+                  type: integer
+                  description: "이미지 파일 높이(단위: px)"
+                phyWidth:
+                  type: number;
+                  description: "물리적 이미지 너비(단위: m)"
+                phyHeight:
+                  type: number
+                  description: "물리적 이미지 높이(단위: m)"
+              required:
+                - file
+                - width
+                - height
+                - phyWidth
+                - phyHeight
+            encoding:
+              file:
+                contentType: image/png, image/jpeg, image/gif
+            example:
+              file: /media/dog.jpg
+              width: 100
+              height: 200
+              phyWidth: 0.1
+              phyHeight: 0.2
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/Image"
+              example:
+                _id: 5cdcec4b84cc2d4afb2cc3da
+                userId: 5cda76af7a6a68609a521829
+                filename: 5cda76af7a6a68609a5218491557982283354.jpg
+                width: 200
+                height: 300
+                phyWidth: 0.2
+                phyHeight: 0.3
+                createdAt: "2019-05-14T08:05:03.602Z"
+                updatedAt: "2019-05-14T08:05:03.602Z"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+    get:
+      tags:
+        - Image
+      summary: 이미지 정보 리스트 가져오기
+      description: 사용자가 업로드한 이미지 파일들 정보를 보여줍니다.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/definitions/Image"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+  /images/{id}:
+    get:
+      tags:
+        - Image
+      summary: 이미지 정보 가져오기
+      description: 이미지 ID에 해당하는 이미지에 대한 정보를 보여줍니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 이미지 ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/Image"
+              example:
+                _id: 3aeb28bd8b8g27409a791124
+                userId: 5cda76af7a6a68609a521842
+                filename: 5cda763aeb28bd8b8g27409a791124.jpg
+                width: 100
+                height: 200
+                phyWidth: 0.1
+                phyHeight: 0.2
+                createdAt: "2019-05-14T08:05:03.602Z"
+                updatedAt: "2019-05-14T08:05:03.602Z"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+    put:
+      tags:
+        - Image
+      summary: 이미지 정보 업데이트
+      description: 이미지 ID에 해당하는 이미지에 대한 정보를 업데이트합니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 이미지 ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  description: 이미지 파일
+                width:
+                  type: integer
+                  description: "이미지 파일 너비(단위: px)"
+                height:
+                  type: integer
+                  description: "이미지 파일 높이(단위: px)"
+                phyWidth:
+                  type: number
+                  description: "물리적 이미지 너비(단위: m)"
+                phyHeight:
+                  type: number
+                  description: "물리적 이미지 높이(단위: m)"
+            encoding:
+              file:
+                contentType: image/png, image/jpeg, image/gif
+            example:
+              file: /media/cat.jpg
+              width: 120
+              height: 240
+              phyWidth: 0.24
+              phyHeight: 0.48
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/Image"
+              example:
+                _id: 3aeb28bd8b8g27409a791124
+                userId: 5cda76af7a6a68609a521842
+                filename: 5cda763aeb28bd8b8g27409a791124.jpg
+                width: 120
+                height: 240
+                phyWidth: 0.24
+                phyHeight: 0.48
+                createdAt: "2019-05-14T08:05:03.602Z"
+                updatedAt: "2019-05-19T08:12:42.112Z"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+    delete:
+      tags:
+        - Image
+      summary: 이미지 정보 삭제
+      description: 이미지 ID에 해당하는 이미지 정보(이미지 파일 포함)를 삭제합니다. 삭제된 이미지 정보 및 파일은 복구할 수 없습니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 이미지 ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+  /videos:
+    post:
+      tags:
+        - Video
+      summary: 비디오 정보 업로드
+      description: 이미지가 인식되었을 때 재생할 비디오 파일을 업로드합니다. 이 때 비디오 파일뿐만 아니라 비디오 파일 해상도 정보도 같이 업로드합니다.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 비디오 파일
+                width:
+                  type: integer
+                  description: "비디오 파일 너비(단위: px)"
+                height:
+                  type: integer
+                  description: "비디오 파일 높이(단위: px)"
+              required:
+                - file
+                - width
+                - height
+            encoding:
+              file:
+                contentType: video/mp4
+            example:
+              file: /media/dog.mp4
+              width: 100
+              height: 200
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/Video"
+              example:
+                _id: 5cdcec4b84cc2d4afb2cc3da
+                userId: 5cda76af7a6a68609a521829
+                filename: 5cda76af7a6a68609a5218491557982283354.mp4
+                width: 800
+                height: 600
+                createdAt: "2019-05-14T08:05:03.602Z"
+                updatedAt: "2019-05-14T08:05:03.602Z"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+    get:
+      tags:
+        - Video
+      summary: 비디오 정보 리스트 가져오기
+      description: 사용자가 업로드한 비디오 파일들 정보를 보여줍니다.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/definitions/Video"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+  /videos/{id}:
+    get:
+      tags:
+        - Video
+      summary: 비디오 정보 가져오기
+      description: 비디오 ID에 해당하는 비디오에 대한 정보를 보여줍니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 비디오 ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/Video"
+              example:
+                _id: 3aeb28bd8b8g27409a791124
+                userId: 5cda76af7a6a68609a521842
+                filename: 5cda763aeb28bd8b8g27409a791124.mp4
+                width: 100
+                height: 200
+                createdAt: "2019-05-14T08:05:03.602Z"
+                updatedAt: "2019-05-14T08:05:03.602Z"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+    put:
+      tags:
+        - Video
+      summary: 비디오 정보 업데이트
+      description: 비디오 ID에 해당하는 비디오에 대한 정보를 업데이트합니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 비디오 ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  description: 비디오 파일
+                width:
+                  type: integer
+                  description: "비디오 파일 너비(단위: px)"
+                height:
+                  type: integer
+                  description: "비디오 파일 높이(단위: px)"
+            encoding:
+              file:
+                contentType: video/mp4
+            example:
+              file: /media/cat.mp4
+              width: 800
+              height: 600
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/Video"
+              example:
+                _id: 3aeb28bd8b8g27409a791124
+                userId: 5cda76af7a6a68609a521842
+                filename: 5cda763aeb28bd8b8g27409a791124.mp4
+                width: 800
+                height: 600
+                createdAt: "2019-05-14T08:05:03.602Z"
+                updatedAt: "2019-05-19T08:12:42.112Z"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+    delete:
+      tags:
+        - Video
+      summary: 비디오 정보 삭제
+      description: 비디오 ID에 해당하는 비디오 정보(비디오 파일 포함)를 삭제합니다. 삭제된 비디오 파일 및 정보는 복구할 수 없습니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 비디오 ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+  /links:
+    post:
+      tags:
+        - Link
+      summary: 링크 정보 저장
+      description: 앱에서 이미지가 인식되었을 때 비디오를 재생하기 위해서는 이미지와 비디오 간의 링크 정보가 필요합니다.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  description: 이미지 ID
+                video:
+                  type: string
+                  description: 비디오 ID
+              required:
+                - image
+                - video
+            example:
+              image: ab78bc7d8s0099efsena8127
+              video: c65a987b987a887a09a76bcc
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/Link"
+              # example:
+              #   _id: 5cdcec4b84cc2d4afb2cc3da
+              #   userId: 2cda76af7a6a68609a521829
+              #   filename:
+              #   width: 800
+              #   height: 600
+              #   createdAt: '2019-05-14T08:05:03.602Z'
+              #   updatedAt: '2019-05-14T08:05:03.602Z'
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+    get:
+      tags:
+        - Link
+      summary: 링크 정보 리스트 가져오기
+      description: 사용자가 저장한 링크 정보를 보여줍니다.
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/definitions/Link"
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+  /links/{id}:
+    get:
+      tags:
+        - Link
+      summary: 링크 정보 가져오기
+      description: 링크 ID에 해당하는 링크에 대한 정보를 보여줍니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 링크 ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/Link"
+              # example:
+              #   _id: 3aeb28bd8b8g27409a791124
+              #   userId: 5cda76af7a6a68609a521842
+              #   filename: 5cda763aeb28bd8b8g27409a791124.mp4
+              #   width: 100
+              #   height: 200
+              #   createdAt: '2019-05-14T08:05:03.602Z'
+              #   updatedAt: '2019-05-14T08:05:03.602Z'
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+    put:
+      tags:
+        - Link
+      summary: 링크 정보 업데이트
+      description: 링크 ID에 해당하는 링크에 대한 정보를 업데이트합니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 링크 ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image:
+                  type: string
+                  description: 이미지 ID
+                video:
+                  type: string
+                  description: 비디오 ID
+            # example:
+            #   file: /media/cat.mp4
+            #   width: 800
+            #   height: 600
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/definitions/Link"
+              # example:
+              #   _id: 3aeb28bd8b8g27409a791124
+              #   userId: 5cda76af7a6a68609a521842
+              #   filename: 5cda763aeb28bd8b8g27409a791124.mp4
+              #   width: 800
+              #   height: 600
+              #   createdAt: '2019-05-14T08:05:03.602Z'
+              #   updatedAt: '2019-05-19T08:12:42.112Z'
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+    delete:
+      tags:
+        - Link
+      summary: 링크 정보 삭제
+      description: 링크 정보를 삭제합니다. 링크 정보를 삭제해도 링크에 포함된 이미지와 비디오 정보는 삭제되지 않습니다.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          schema:
+            type: string
+          required: true
+          description: 링크 ID
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+        "401":
+          description: |
+            1. HTTP 요청 헤더(Authorization)에 토큰이 없는 경우(Token is required)
+            2. 토큰 유효 기간이 지난 경우(This token is expired)
+            3. 유효한 토큰이 아닌 경우(This token is invalid)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+definitions:
+  User:
+    properties:
+      _id:
+        type: string
+        description: 사용자 ID
+      username:
+        type: string
+        description: 사용자 이름
+      email:
+        type: string
+        description: 사용자 이메일
+      createdAt:
+        type: string
+        description: "생성 날짜/시간"
+      updatedAt:
+        type: string
+        description: "마지막 수정 날짜/시간"
+  Image:
+    properties:
+      _id:
+        type: string
+        description: 이미지 ID
+      userId:
+        type: string
+        description: 사용자 ID
+      filename:
+        type: string
+        description: 이미지 파일명
+      width:
+        type: integer
+        description: "이미지 파일 너비(단위: px)"
+      height:
+        type: integer
+        description: "이미지 파일 높이(단위: px)"
+      phyWidth:
+        type: number
+        description: "물리적 이미지 너비(단위: m)"
+      phyHeight:
+        type: number
+        description: "물리적 이미지 높이(단위: m)"
+      createdAt:
+        type: string
+        description: "생성 날짜/시간"
+      updatedAt:
+        type: string
+        description: "마지막 수정 날짜/시간"
+  Video:
+    properties:
+      _id:
+        type: string
+        description: 비디오 ID
+      userId:
+        type: string
+        description: 사용자 ID
+      filename:
+        type: string
+        description: 비디오 파일명
+      width:
+        type: integer
+        description: "비디오 파일 너비(단위: px)"
+      height:
+        type: integer
+        description: "비디오 파일 높이(단위: px)"
+      createdAt:
+        type: string
+        description: "생성 날짜/시간"
+      updatedAt:
+        type: string
+        description: "마지막 수정 날짜/시간"
+  Link:
+    properties:
+      _id:
+        type: string
+        description: 링크 ID
+      userId:
+        type: string
+        description: 사용자 ID
+      image:
+        type: string
+        description: 이미지 ID
+      video:
+        type: string
+        description: 비디오 ID
+      createdAt:
+        type: string
+        description: "생성 날짜/시간"
+      updatedAt:
+        type: string
+        description: "마지막 수정 날짜/시간"

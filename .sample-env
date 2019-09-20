@@ -1,0 +1,2 @@
+DB_URL=mongodb://username:password@ds1.mlab.com:49583/test-db
+JWT_TOKEN_SECRET_KEY=mTfj)cFgZF,k4!TBfNLw

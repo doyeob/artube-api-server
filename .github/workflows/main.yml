@@ -1,0 +1,35 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches:
+      - master
+
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Setup node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: "10.x"
+
+      - name: Install packages
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        env:
+          DB_URL: ${{ secrets.DB_URL }}
+          JWT_TOKEN_SECRET_KEY: ${{ secrets.JWT_TOKEN_SECRET_KEY }}
+        run: npm test

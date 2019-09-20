@@ -1,0 +1,13 @@
+{
+  "env": {
+    "mocha": true
+  },
+  "extends": ["airbnb", "plugin:prettier/recommended"], // Prettier Recommanded
+  "rules": {
+    "max-classes-per-file": 0,
+    "no-unused-vars": 0,
+    "no-return-await": 0,
+    "no-underscore-dangle": 0,
+    "no-console": 0
+  }
+}
