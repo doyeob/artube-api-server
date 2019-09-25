@@ -36,6 +36,7 @@ app.use((err, req, res, next) => {
   } else {
     res.status(500).json({ code: "UncaughtError", message: err.message });
   }
+  console.error(err);
 });
 
 app.listen(port, () => {
