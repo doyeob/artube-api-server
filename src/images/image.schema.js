@@ -11,14 +11,12 @@ const height = Joi.number()
   .max(100000);
 
 const phyWidth = Joi.number()
-  .integer()
-  .min(1)
-  .max(100000);
+  .min(0)
+  .max(10000);
 
 const phyHeight = Joi.number()
-  .integer()
-  .min(1)
-  .max(100000);
+  .min(0)
+  .max(10000);
 
 const create = {
   width: width.required(),
