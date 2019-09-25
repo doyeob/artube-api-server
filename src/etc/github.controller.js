@@ -15,9 +15,11 @@ module.exports = (req, res) => {
   const isValid = signature === req.headers["x-hub-signature"];
 
   if (isValid) {
+    console.log(`Start hooking from remote repo to ${REPO}`);
     res.status(200).end("Authorized");
     exec(`cd ${REPO} && git pull && npm install`);
   } else {
+    console.log("Fail to hook from remote repo");
     res.status(403).send("Permission Denied");
   }
 };
