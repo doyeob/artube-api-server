@@ -1,4 +1,5 @@
 const fs = require("fs").promises;
+const { exec } = require("child_process");
 const Video = require("./video.model");
 const { VideoNotFound } = require("./video.errors");
 
@@ -16,6 +17,10 @@ async function getById(id) {
 
 async function create(videoParam) {
   const video = new Video(videoParam);
+
+  await exec(
+    `ffmpeg -ss 00:00:01.01 -i upload/videos/${videoParam.filename} -s 160*120 -t 0.001 upload/videos/${videoParam.filename}.jpg`
+  );
   return await video.save();
 }
 
@@ -26,8 +31,12 @@ async function update(id, videoParam) {
 
   if (videoParam.filename) {
     await fs.unlink(`upload/videos/${video.filename}`);
+    await fs.unlink(`upload/videos/${video.filename}.jpg`);
   }
 
+  await exec(
+    `ffmpeg -ss 00:00:01.01 -i upload/videos/${videoParam.filename} -s 160*120 -t 0.001 upload/videos/${videoParam.filename}.jpg`
+  );
   Object.assign(video, videoParam);
 
   return await video.save();
@@ -39,6 +48,7 @@ async function remove(id) {
   if (!video) throw new VideoNotFound();
 
   await fs.unlink(`upload/videos/${video.filename}`);
+  await fs.unlink(`upload/videos/${video.filename}.jpg`);
   await Video.findByIdAndRemove(id);
 }
 
