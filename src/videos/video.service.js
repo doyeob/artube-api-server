@@ -17,9 +17,8 @@ async function getById(id) {
 
 async function create(videoParam) {
   const video = new Video(videoParam);
-
   await exec(
-    `ffmpeg -ss 00:00:01.01 -i upload/videos/${videoParam.filename} -s 160*120 -t 0.001 upload/videos/${videoParam.filename}.jpg`
+    `ffmpeg -ss 00:00:01.01 -i upload/videos/${videoParam.filename} -s 160*120 -t 0.1 upload/videos/${videoParam.filename}.jpg`
   );
   return await video.save();
 }
@@ -30,12 +29,16 @@ async function update(id, videoParam) {
   if (!video) throw new VideoNotFound();
 
   if (videoParam.filename) {
-    await fs.unlink(`upload/videos/${video.filename}`);
-    await fs.unlink(`upload/videos/${video.filename}.jpg`);
+    try {
+      await fs.unlink(`upload/videos/${video.filename}`);
+      await fs.unlink(`upload/videos/${video.filename}.jpg`);
+    } catch (e) {
+      /* 무시함. */
+    }
   }
 
   await exec(
-    `ffmpeg -ss 00:00:01.01 -i upload/videos/${videoParam.filename} -s 160*120 -t 0.001 upload/videos/${videoParam.filename}.jpg`
+    `ffmpeg -ss 00:00:01.01 -i upload/videos/${videoParam.filename} -s 160*120 -t 0.1 upload/videos/${videoParam.filename}.jpg`
   );
   Object.assign(video, videoParam);
 
@@ -47,8 +50,12 @@ async function remove(id) {
 
   if (!video) throw new VideoNotFound();
 
-  await fs.unlink(`upload/videos/${video.filename}`);
-  await fs.unlink(`upload/videos/${video.filename}.jpg`);
+  try {
+    await fs.unlink(`upload/videos/${video.filename}`);
+    await fs.unlink(`upload/videos/${video.filename}.jpg`);
+  } catch (e) {
+    /* 무시함. */
+  }
   await Video.findByIdAndRemove(id);
 }
 

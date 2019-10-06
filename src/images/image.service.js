@@ -48,8 +48,13 @@ async function remove(id) {
 
   if (!image) throw new ImageNotFound();
 
-  await fs.unlink(`upload/images/${image.filename}`);
-  await fs.unlink(`upload/images/thumb_${image.filename}`);
+  try {
+    await fs.unlink(`upload/images/${image.filename}`);
+    await fs.unlink(`upload/images/thumb_${image.filename}`);
+  } catch (e) {
+    /* 무시함. */
+  }
+
   await Image.findByIdAndRemove(id);
 }
 
